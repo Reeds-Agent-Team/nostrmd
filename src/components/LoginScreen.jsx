@@ -98,7 +98,7 @@ export default function LoginScreen({ onLogin }) {
 
         {/* Logo / title */}
         <div className="text-center">
-          <h1 className="text-4xl font-bold tracking-tight text-neutral-100">NostrMD</h1>
+          <img src="/nostrmd.png" alt="NostrMD" className="h-16 mx-auto mb-2" />
           <p className="mt-2 text-neutral-500 text-sm">Long-form publishing for Nostr</p>
         </div>
 

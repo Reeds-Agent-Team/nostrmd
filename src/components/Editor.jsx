@@ -1,8 +1,8 @@
 import { useRef } from 'react'
 import MDEditor from '@uiw/react-md-editor'
-import { isSafeUrl } from '../lib/utils.js'
+import { isSafeUrl, parseDateString, parseFrontmatter, buildFrontmatter, titleToSlug } from '../lib/utils.js'
 
-export default function Editor({ content, onChange, activeTab, onTabChange, metadata, source, onClear }) {
+export default function Editor({ content, onChange, activeTab, onTabChange, metadata, source, onClear, onFileLoad }) {
   const fileInputRef = useRef(null)
 
   function handleFileUpload(e) {
@@ -10,10 +10,46 @@ export default function Editor({ content, onChange, activeTab, onTabChange, meta
     if (!file) return
     const reader = new FileReader()
     reader.onload = (ev) => {
-      onChange(ev.target.result || '')
+      const raw = ev.target.result || ''
       e.target.value = ''
+
+      const { frontmatter, content: body } = parseFrontmatter(raw)
+
+      // If no frontmatter, just load the raw content as before
+      if (!frontmatter) { onChange(body); return }
+
+      // Frontmatter found — populate metadata and source fields
+      const tags = Array.isArray(frontmatter.tags) ? frontmatter.tags : []
+      onFileLoad({
+        content: body,
+        metadata: {
+          title:          frontmatter.title || '',
+          summary:        frontmatter.summary || '',
+          publishedAtDate: frontmatter.published_at || '',
+          image:          frontmatter.image || '',
+          tagsRaw:        tags.join(', '),
+          tags,
+        },
+        source: {
+          name: frontmatter.source_name || '',
+          url:  frontmatter.source_url  || '',
+        },
+      })
     }
     reader.readAsText(file)
+  }
+
+  function handleExport() {
+    const frontmatter = buildFrontmatter(metadata, source)
+    const fullContent = frontmatter + content
+    const filename = (titleToSlug(metadata.title) || 'nostrmd-export') + '.md'
+    const blob = new Blob([fullContent], { type: 'text/markdown' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   return (
@@ -51,15 +87,24 @@ export default function Editor({ content, onChange, activeTab, onTabChange, meta
           aria-hidden="true"
         />
 
-        {/* Clear button — only shown when there's something to clear */}
+        {/* Export + Clear — only shown when there's something to work with */}
         {(content || metadata?.title) && (
-          <button
-            onClick={onClear}
-            className="ml-auto px-3 py-1.5 text-sm rounded border border-neutral-700 text-neutral-500 hover:text-red-400 hover:border-red-900 transition-colors"
-            aria-label="Clear editor and reset all fields"
-          >
-            Clear
-          </button>
+          <div className="ml-auto flex items-center gap-1">
+            <button
+              onClick={handleExport}
+              className="px-3 py-1.5 text-sm rounded border border-neutral-700 text-neutral-500 hover:text-neutral-200 hover:border-neutral-500 transition-colors"
+              aria-label="Export as markdown file with frontmatter"
+            >
+              Export .md
+            </button>
+            <button
+              onClick={onClear}
+              className="px-3 py-1.5 text-sm rounded border border-neutral-700 text-neutral-500 hover:text-red-400 hover:border-red-900 transition-colors"
+              aria-label="Clear editor and reset all fields"
+            >
+              Clear
+            </button>
+          </div>
         )}
       </div>
 
@@ -117,7 +162,7 @@ export default function Editor({ content, onChange, activeTab, onTabChange, meta
                 : source.name
               }
               {metadata?.publishedAtDate && (
-                <> on {new Date(metadata.publishedAtDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</>
+                <> on {parseDateString(metadata.publishedAtDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</>
               )}
             </p>
           )}

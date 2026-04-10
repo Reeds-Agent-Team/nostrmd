@@ -37,10 +37,8 @@ export default function Header({ user, onLogout, onOpenArticles }) {
         </div>
       </div>
 
-      {/* App title centered */}
-      <span className="text-neutral-400 font-bold tracking-widest text-sm absolute left-1/2 -translate-x-1/2">
-        NostrMD
-      </span>
+      {/* Logo centered */}
+      <img src="/nostrmd.png" alt="NostrMD" className="h-7 absolute left-1/2 -translate-x-1/2" />
 
       <div className="flex items-center gap-2">
         {/* My Articles drawer toggle */}

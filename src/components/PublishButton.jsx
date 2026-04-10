@@ -46,15 +46,29 @@ export default function PublishButton({ content, metadata, source, user, onPubli
     }
   }
 
-  async function handleCopyEventId() {
-    if (!result?.nevent) return
+  async function handleCopyNaddr() {
+    const text = result?.naddr
+    if (!text) return
     try {
-      await navigator.clipboard.writeText(result.nevent)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      // Clipboard API requires HTTPS or localhost — falls back to execCommand
+      // for local network access (192.168.x.x) during development
+      await navigator.clipboard.writeText(text)
     } catch {
-      // Clipboard API unavailable — silently fail
+      try {
+        const el = document.createElement('textarea')
+        el.value = text
+        el.style.cssText = 'position:fixed;opacity:0'
+        document.body.appendChild(el)
+        el.focus()
+        el.select()
+        document.execCommand('copy')
+        document.body.removeChild(el)
+      } catch {
+        return // both methods failed, don't show "Copied!"
+      }
     }
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   function handlePublishAnother() {
@@ -72,12 +86,14 @@ export default function PublishButton({ content, metadata, source, user, onPubli
           Published successfully.
         </div>
 
-        {/* Relay list */}
+        {/* Relay list — scrollable so a large list doesn't blow out the sidebar */}
         <div className="space-y-1">
-          <p className="text-xs text-neutral-600">Published to:</p>
-          {result.relays.map(r => (
-            <p key={r} className="text-xs text-neutral-500 font-mono truncate">{r}</p>
-          ))}
+          <p className="text-xs text-neutral-600">Published to {result.relays.length} {result.relays.length === 1 ? 'relay' : 'relays'}:</p>
+          <div className="max-h-32 overflow-y-auto space-y-0.5">
+            {result.relays.map(r => (
+              <p key={r} className="text-xs text-neutral-500 font-mono truncate">{r}</p>
+            ))}
+          </div>
         </div>
 
         {/* View on njump.me */}
@@ -93,10 +109,10 @@ export default function PublishButton({ content, metadata, source, user, onPubli
         {/* Action buttons */}
         <div className="flex gap-2">
           <button
-            onClick={handleCopyEventId}
+            onClick={handleCopyNaddr}
             className="flex-1 py-2 px-3 rounded border border-neutral-700 text-neutral-400 hover:text-neutral-200 hover:border-neutral-500 text-xs transition-colors"
           >
-            {copied ? 'Copied!' : 'Copy Event ID'}
+            {copied ? 'Copied!' : 'Copy naddr'}
           </button>
           <button
             onClick={handlePublishAnother}

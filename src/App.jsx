@@ -83,6 +83,7 @@ export default function App() {
                 metadata={metadata}
                 source={source}
                 onClear={handlePublishAnother}
+                onFileLoad={handleLoadArticle}
               />
             </div>
 
