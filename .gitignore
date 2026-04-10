@@ -4,6 +4,7 @@ custom-prompt.md
 
 # Claude Code local session files
 .claude/
+CLAUDE.md
 
 # Dependencies
 node_modules/
