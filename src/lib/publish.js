@@ -8,7 +8,7 @@ import { titleToSlug, toUnixTimestamp, buildAttributionLine } from './utils.js'
  *
  * @param {object} params
  * @param {string} params.content - Raw markdown content from the editor
- * @param {object} params.metadata - Title, summary, publishedAtDate, createdAtOverride, image, tags
+ * @param {object} params.metadata - Title, summary, publishedAtDate, image, tags
  * @param {object} params.source - name and url for the "originally published at" attribution
  * @returns {Promise<{nevent: string, relays: string[]}>}
  */
@@ -25,10 +25,7 @@ export async function publishArticle({ content, metadata, source }) {
     finalContent = attribution + content
   }
 
-  // Determine created_at: use override if set, otherwise current time
-  const createdAt = metadata.createdAtOverride
-    ? toUnixTimestamp(new Date(metadata.createdAtOverride))
-    : Math.floor(Date.now() / 1000)
+  const createdAt = Math.floor(Date.now() / 1000)
 
   // published_at: use the user-supplied date if set, otherwise fall back to createdAt
   const publishedAt = metadata.publishedAtDate

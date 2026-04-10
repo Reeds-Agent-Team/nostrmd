@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import MDEditor from '@uiw/react-md-editor'
+import { isSafeUrl } from '../lib/utils.js'
 
 export default function Editor({ content, onChange, activeTab, onTabChange, metadata, source, onClear }) {
   const fileInputRef = useRef(null)
@@ -81,8 +82,8 @@ export default function Editor({ content, onChange, activeTab, onTabChange, meta
         {/* Right: custom preview with metadata header */}
         <div className="w-1/2 overflow-y-auto bg-neutral-950 px-8 py-6">
 
-          {/* Cover image — 16:9 */}
-          {metadata?.image && (
+          {/* Cover image — 16:9, only render if URL uses http/https */}
+          {metadata?.image && isSafeUrl(metadata.image) && (
             <div className="w-full aspect-video mb-6 rounded-lg overflow-hidden border border-neutral-800">
               <img
                 src={metadata.image}
@@ -111,7 +112,7 @@ export default function Editor({ content, onChange, activeTab, onTabChange, meta
           {source?.name && (
             <p className="text-sm text-neutral-500 italic mb-4 font-sans">
               Originally published at{' '}
-              {source.url
+              {source.url && isSafeUrl(source.url)
                 ? <a href={source.url} target="_blank" rel="noopener noreferrer" className="underline hover:text-neutral-300">{source.name}</a>
                 : source.name
               }

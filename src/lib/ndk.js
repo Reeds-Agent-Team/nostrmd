@@ -21,7 +21,20 @@ export function getNDK() {
   return ndkInstance
 }
 
-// Call on logout to force a fresh NDK instance on next login
+// Call on logout to close relay connections, detach the signer,
+// and force a fresh NDK instance on next login.
 export function resetNDK() {
+  if (ndkInstance) {
+    try {
+      // Detach the signer so the private key reference is released immediately
+      // rather than waiting for GC to collect the old NDK instance
+      ndkInstance.signer = undefined
+      for (const relay of ndkInstance.pool?.relays?.values() || []) {
+        relay.disconnect()
+      }
+    } catch {
+      // Best-effort cleanup — don't block logout on relay errors
+    }
+  }
   ndkInstance = null
 }

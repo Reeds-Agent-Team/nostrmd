@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { publishArticle } from '../lib/publish.js'
 
 // Publish states
@@ -14,11 +14,24 @@ export default function PublishButton({ content, metadata, source, user, onPubli
   const [result, setResult] = useState(null) // { nevent, relays }
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
+  const publishingRef = useRef(false)
+
+  // Reset success/error state when the user changes content or metadata,
+  // so stale results from a previous publish don't linger
+  useEffect(() => {
+    if (state === STATE.SUCCESS || state === STATE.ERROR) {
+      setState(STATE.IDLE)
+      setResult(null)
+      setError('')
+    }
+  }, [content, metadata.title])
 
   const canPublish = !!metadata.title.trim() && !!content.trim()
 
   async function handlePublish() {
-    if (!canPublish) return
+    // Ref-based guard prevents double-publish from rapid clicks
+    if (!canPublish || publishingRef.current) return
+    publishingRef.current = true
     setState(STATE.PUBLISHING)
     setError('')
     try {
@@ -28,6 +41,8 @@ export default function PublishButton({ content, metadata, source, user, onPubli
     } catch (err) {
       setError(err.message || 'Publish failed.')
       setState(STATE.ERROR)
+    } finally {
+      publishingRef.current = false
     }
   }
 

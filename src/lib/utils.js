@@ -21,13 +21,32 @@ export function truncateNpub(npub) {
   return `${npub.slice(0, 8)}...${npub.slice(-4)}`
 }
 
-// Builds the "Originally published at" attribution line injected into content
+// Checks if a URL uses a safe protocol (http/https only).
+// Blocks javascript:, data:, vbscript:, etc.
+export function isSafeUrl(url) {
+  if (!url) return true
+  try {
+    const parsed = new URL(url)
+    return ['http:', 'https:'].includes(parsed.protocol)
+  } catch {
+    return false
+  }
+}
+
+// Escapes characters that have special meaning in markdown link syntax
+function escapeMarkdownLink(str) {
+  return (str || '').replace(/[[\]()]/g, '\\$&')
+}
+
+// Builds the "Originally published at" attribution line injected into content.
+// Escapes user input to prevent markdown injection via sourceName/sourceUrl.
 export function buildAttributionLine(sourceName, sourceUrl, publishedAt) {
   const dateStr = publishedAt
     ? new Date(publishedAt * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
     : ''
-  const sourceLink = sourceUrl
-    ? `[${sourceName}](${sourceUrl})`
-    : sourceName
+  const safeName = escapeMarkdownLink(sourceName)
+  const sourceLink = sourceUrl && isSafeUrl(sourceUrl)
+    ? `[${safeName}](${escapeMarkdownLink(sourceUrl)})`
+    : safeName
   return `*Originally published at ${sourceLink}${dateStr ? ` on ${dateStr}` : ''}*\n\n`
 }
