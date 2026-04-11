@@ -46,8 +46,16 @@ export default function LoginScreen({ onLogin }) {
       const ndk = getNDK()
       ndk.signer = signer
 
-      // blockUntilReady resolves once the extension returns the pubkey
-      await signer.blockUntilReady()
+      // blockUntilReady resolves once the extension returns the pubkey.
+      // 15s timeout catches extensions like keys.band where a pending site-approval
+      // dialog can cause the response to never arrive due to a Chrome message
+      // callback race condition.
+      await Promise.race([
+        signer.blockUntilReady(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('__timeout__')), 15000)
+        ),
+      ])
 
       // Fire relay connections in the background — login doesn't need to wait for them
       ndk.connect().catch(() => {})
@@ -56,7 +64,13 @@ export default function LoginScreen({ onLogin }) {
       const user = await fetchUserProfile(ndk, pubkey.pubkey)
       onLogin(user)
     } catch (err) {
-      setError('Extension login failed: ' + (err.message || 'unknown error'))
+      if (err.message === '__timeout__') {
+        setError(
+          'Extension did not respond in time. If you are using keys.band, open the extension and approve this site first, then try again.'
+        )
+      } else {
+        setError('Extension login failed: ' + (err.message || 'unknown error'))
+      }
     } finally {
       setLoading(false)
     }
