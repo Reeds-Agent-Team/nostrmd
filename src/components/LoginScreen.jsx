@@ -36,6 +36,10 @@ export default function LoginScreen({ onLogin }) {
 
   async function loginWithExtension() {
     setError('')
+    if (!window.nostr) {
+      setError('No Nostr extension detected. Install Alby, nos2x, keys.band, or Nostore.')
+      return
+    }
     setLoading(true)
     try {
       const signer = new NDKNip07Signer()
@@ -106,7 +110,7 @@ export default function LoginScreen({ onLogin }) {
         <div className="space-y-3">
           <button
             onClick={loginWithExtension}
-            disabled={loading || !hasExtension}
+            disabled={loading}
             className="w-full py-3 px-4 rounded-lg bg-purple-700 hover:bg-purple-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium transition-colors"
             aria-label="Login with Nostr browser extension"
           >
@@ -114,7 +118,7 @@ export default function LoginScreen({ onLogin }) {
           </button>
           {!hasExtension && (
             <p className="text-xs text-neutral-500 text-center">
-              No extension detected. Install Alby, nos2x, or Nostore to use this option.
+              Works with Alby, nos2x, Nostore, keys.band, and other NIP-07 extensions.
             </p>
           )}
         </div>
