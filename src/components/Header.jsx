@@ -1,7 +1,7 @@
 import { truncateNpub } from '../lib/utils.js'
 import { resetNDK } from '../lib/ndk.js'
 
-export default function Header({ user, onLogout, onOpenArticles }) {
+export default function Header({ user, onLogout, onOpenArticles, onOpenHelp }) {
   const profile = user?.profile
   const npub = user?.npub || ''
 
@@ -48,6 +48,15 @@ export default function Header({ user, onLogout, onOpenArticles }) {
           aria-label="View my published articles"
         >
           My Articles
+        </button>
+
+        {/* Help */}
+        <button
+          onClick={onOpenHelp}
+          className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors px-3 py-1.5 rounded border border-neutral-800 hover:border-neutral-600"
+          aria-label="How to use NostrMD"
+        >
+          ?
         </button>
 
         {/* Logout */}

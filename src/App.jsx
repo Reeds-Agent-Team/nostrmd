@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import LoginScreen from './components/LoginScreen.jsx'
 import Header from './components/Header.jsx'
 import Editor from './components/Editor.jsx'
@@ -6,6 +6,9 @@ import MetadataForm from './components/MetadataForm.jsx'
 import OriginalSourceField from './components/OriginalSourceField.jsx'
 import PublishButton from './components/PublishButton.jsx'
 import ArticleDrawer from './components/ArticleDrawer.jsx'
+import HelpModal from './components/HelpModal.jsx'
+import DraftBanner from './components/DraftBanner.jsx'
+import { useDraft } from './lib/useDraft.js'
 
 // Default state shapes — keeps component props clean
 function defaultMetadata() {
@@ -30,6 +33,23 @@ export default function App() {
   const [metadata, setMetadata] = useState(defaultMetadata())
   const [source, setSource] = useState(defaultSource())
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
+  const [pendingDraft, setPendingDraft] = useState(null)
+
+  const { saveDraft, loadDraft, clearDraft } = useDraft(user?.pubkey)
+
+  // On login, check for a saved draft
+  useEffect(() => {
+    if (!user) return
+    const draft = loadDraft()
+    if (draft) setPendingDraft(draft)
+  }, [user])
+
+  // Auto-save whenever content, metadata, or source changes
+  useEffect(() => {
+    if (!user) return
+    saveDraft(content, metadata, source)
+  }, [content, metadata, source])
 
   function handleLogout() {
     setUser(null)
@@ -37,6 +57,21 @@ export default function App() {
     setMetadata(defaultMetadata())
     setSource(defaultSource())
     setDrawerOpen(false)
+    setPendingDraft(null)
+  }
+
+  function handleRestoreDraft() {
+    if (!pendingDraft) return
+    setContent(pendingDraft.content || '')
+    setMetadata(pendingDraft.metadata || defaultMetadata())
+    setSource(pendingDraft.source || defaultSource())
+    setActiveTab('write')
+    setPendingDraft(null)
+  }
+
+  function handleDiscardDraft() {
+    clearDraft()
+    setPendingDraft(null)
   }
 
   // Called when user clicks an article in the drawer
@@ -47,7 +82,12 @@ export default function App() {
     setActiveTab('write') // switch to write tab so the loaded content is visible
   }
 
+  function handlePublishSuccess() {
+    clearDraft()
+  }
+
   function handlePublishAnother() {
+    clearDraft()
     setContent('')
     setMetadata(defaultMetadata())
     setSource(defaultSource())
@@ -59,7 +99,19 @@ export default function App() {
         <LoginScreen onLogin={setUser} />
       ) : (
         <div className="flex flex-col h-screen">
-          <Header user={user} onLogout={handleLogout} onOpenArticles={() => setDrawerOpen(true)} />
+          <Header user={user} onLogout={handleLogout} onOpenArticles={() => setDrawerOpen(true)} onOpenHelp={() => setHelpOpen(true)} />
+
+          {/* Draft restore banner — shown once after login if a saved draft exists */}
+          {pendingDraft && (
+            <DraftBanner
+              draft={pendingDraft}
+              onRestore={handleRestoreDraft}
+              onDiscard={handleDiscardDraft}
+            />
+          )}
+
+          {/* Help modal */}
+          {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} />}
 
           {/* Article drawer — rendered when open */}
           {drawerOpen && (
@@ -103,6 +155,7 @@ export default function App() {
                   source={source}
                   user={user}
                   onPublishAnother={handlePublishAnother}
+                  onPublishSuccess={handlePublishSuccess}
                 />
               </div>
             </div>

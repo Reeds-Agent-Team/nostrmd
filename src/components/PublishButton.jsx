@@ -9,7 +9,7 @@ const STATE = {
   ERROR: 'error',
 }
 
-export default function PublishButton({ content, metadata, source, user, onPublishAnother }) {
+export default function PublishButton({ content, metadata, source, user, onPublishAnother, onPublishSuccess }) {
   const [state, setState] = useState(STATE.IDLE)
   const [result, setResult] = useState(null) // { nevent, relays }
   const [error, setError] = useState('')
@@ -38,6 +38,7 @@ export default function PublishButton({ content, metadata, source, user, onPubli
       const res = await publishArticle({ content, metadata, source })
       setResult(res)
       setState(STATE.SUCCESS)
+      onPublishSuccess?.()
     } catch (err) {
       setError(err.message || 'Publish failed.')
       setState(STATE.ERROR)

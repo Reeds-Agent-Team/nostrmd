@@ -1,4 +1,27 @@
+import { useRef, useState } from 'react'
+import { uploadToBlossom } from '../lib/blossom.js'
+
 export default function MetadataForm({ metadata, onChange }) {
+  const coverInputRef = useRef(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState('')
+
+  async function handleCoverUpload(e) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploading(true)
+    setUploadError('')
+    try {
+      const url = await uploadToBlossom(file)
+      onChange({ ...metadata, image: url })
+    } catch (err) {
+      setUploadError(err.message || 'Upload failed.')
+    } finally {
+      setUploading(false)
+    }
+  }
+
   function update(field, value) {
     onChange({ ...metadata, [field]: value })
   }
@@ -49,19 +72,41 @@ export default function MetadataForm({ metadata, onChange }) {
         />
       </div>
 
-      {/* Cover image URL */}
+      {/* Cover image URL + upload */}
       <div className="space-y-1">
         <label htmlFor="meta-image" className="block text-sm text-neutral-400">
-          Cover Image URL
+          Cover Image
         </label>
-        <input
-          id="meta-image"
-          type="url"
-          value={metadata.image}
-          onChange={e => update('image', e.target.value)}
-          placeholder="https://nostr.build/..."
-          className="w-full px-3 py-2 rounded bg-neutral-900 border border-neutral-700 text-neutral-100 placeholder-neutral-600 focus:outline-none focus:border-purple-600 text-sm font-mono"
-        />
+        <div className="flex gap-2">
+          <input
+            id="meta-image"
+            type="url"
+            value={metadata.image}
+            onChange={e => update('image', e.target.value)}
+            placeholder="https://..."
+            className="flex-1 min-w-0 px-3 py-2 rounded bg-neutral-900 border border-neutral-700 text-neutral-100 placeholder-neutral-600 focus:outline-none focus:border-purple-600 text-sm font-mono"
+          />
+          <button
+            type="button"
+            onClick={() => coverInputRef.current?.click()}
+            disabled={uploading}
+            className="px-3 py-2 rounded border border-neutral-700 text-neutral-500 hover:text-neutral-200 hover:border-neutral-500 text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+            aria-label="Upload cover image to Blossom"
+          >
+            {uploading ? 'Uploading…' : 'Upload'}
+          </button>
+          <input
+            ref={coverInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleCoverUpload}
+            className="hidden"
+            aria-hidden="true"
+          />
+        </div>
+        {uploadError && (
+          <p className="text-xs text-red-400" role="alert">{uploadError}</p>
+        )}
       </div>
 
       {/* Tags / hashtags */}
