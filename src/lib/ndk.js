@@ -26,6 +26,8 @@ export function getNDK() {
 export function resetNDK() {
   if (ndkInstance) {
     try {
+      // Stop NIP-46 relay subscription if the signer has one (e.g. bunker/nostrconnect)
+      if (ndkInstance.signer?.stop) ndkInstance.signer.stop()
       // Detach the signer so the private key reference is released immediately
       // rather than waiting for GC to collect the old NDK instance
       ndkInstance.signer = undefined
