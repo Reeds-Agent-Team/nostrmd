@@ -164,31 +164,79 @@ export default function LoginScreen({ onLogin }) {
         url: 'https://nostrmd.xyz',
       })
       qrSignerRef.current = signer
+
+      // Extract secret from URI so we can verify connect requests ourselves
+      const secret = new URL(signer.nostrConnectUri).searchParams.get('secret')
       setQrUri(signer.nostrConnectUri)
 
-      // Wait for the signer app to scan and connect — no timeout here,
-      // user cancels manually if needed
-      await signer.blockUntilReady()
+      // NDK bug: blockUntilReadyNostrConnect only listens for "response" events,
+      // but Primal, Amber, and most modern signers send a "connect" REQUEST
+      // (with method:"connect") when they scan the QR. In the NDK RPC module,
+      // events with a method field are emitted as "request", never "response",
+      // so blockUntilReady() hangs forever.
+      //
+      // Fix: listen on signer.rpc directly for both "request" and "response"
+      // events, then do the key resolution ourselves.
+      await new Promise((resolve, reject) => {
+        let done = false
 
-      // NDK bug: blockUntilReadyNostrConnect sets userPubkey and _user to the
-      // signer's ephemeral key (the pubkey that signed the NIP-46 handshake event),
-      // not the user's actual key. Clear the cache, do a real get_public_key RPC,
-      // and fix _user so ndk.activeUser resolves correctly (e.g. for relay list lookup).
-      signer.userPubkey = null
-      const actualPubkey = await signer.getPublicKey()
-      signer.userPubkey = actualPubkey
-      signer._user = ndk.getUser({ pubkey: actualPubkey })
+        async function finish(pubkeyHex) {
+          if (done) return
+          done = true
+          signer.rpc.off('request', onRequest)
+          signer.rpc.off('response', onResponse)
+          try {
+            signer.userPubkey = pubkeyHex
+            signer.bunkerPubkey = pubkeyHex
+            signer._user = ndk.getUser({ pubkey: pubkeyHex })
+            resolve()
+          } catch (e) {
+            reject(e)
+          }
+        }
 
-      // Signer connected — finish login
+        // Request-based flow: Primal, Amber, most modern signers
+        async function onRequest(req) {
+          if (req.method !== 'connect') return
+          if (req.params?.[0] !== secret) return  // secret mismatch — not our QR
+          await finish(req.event.pubkey)
+        }
+
+        // Response-based flow: older signers / bunkers
+        async function onResponse(res) {
+          if (res.result !== secret) return
+          // Older flow sets userPubkey to the ephemeral key — get the real one
+          signer.userPubkey = null
+          const actualPubkey = await signer.getPublicKey().catch(() => res.event.pubkey)
+          await finish(actualPubkey)
+        }
+
+        signer.rpc.on('request', onRequest)
+        signer.rpc.on('response', onResponse)
+
+        // blockUntilReady() starts the internal relay subscription — we still
+        // need it to establish the relay connection and subscription.
+        // We ignore its resolution since our listeners above handle the result.
+        signer.blockUntilReady().catch((err) => {
+          if (done) return
+          if (qrSignerRef.current === null) return  // manual cancel
+          done = true
+          signer.rpc.off('request', onRequest)
+          signer.rpc.off('response', onResponse)
+          reject(err)
+        })
+      })
+
+      if (qrSignerRef.current === null) return  // cancelled mid-flow
+
       setQrWaiting(false)
       setLoading(true)
       ndk.signer = signer
       ndk.connect().catch(() => {})
-      const user = await fetchUserProfile(ndk, actualPubkey)
+      const user = await fetchUserProfile(ndk, signer.userPubkey)
       onLogin(user)
     } catch (err) {
-      // Ignore errors from a manual cancel (.stop() causes blockUntilReady to throw)
-      if (qrSignerRef.current === null) return
+      if (qrSignerRef.current === null) return  // manual cancel
       setQrWaiting(false)
       setError('QR login failed: ' + (err.message || 'unknown error'))
     } finally {
