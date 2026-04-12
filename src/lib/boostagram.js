@@ -32,8 +32,11 @@ import { FALLBACK_RELAYS } from './ndk.js'
 // This is used to fetch your kind 0 profile → lud16 at runtime.
 export const PROJECT_OWNER_NPUB = 'npub1v3rlad7z2v5u4hnpy7eh2fe3rtyfcv2exvdfpalek0ql2982fekqt37xu5'
 
-// Hard fallback if kind 0 fetch fails — avoids a broken widget during dev
-export const FALLBACK_LUD16 = 'agentbob@getalby.com'
+// Hard fallback if kind 0 fetch fails
+export const FALLBACK_LUD16 = 'nostrmd@getalby.com'
+
+// Validate that a lud16 looks like a valid lightning address
+const LUD16_RE = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9.-]+$/
 
 // Relays used for kind 0 lookups and kind 30078 publishing
 const BOOSTAGRAM_RELAYS = [
@@ -134,6 +137,7 @@ export async function resolveRecipientLud16(ownerNpub) {
 
 // ─── LNURL-pay helpers ───────────────────────────────────────────────────────
 export async function fetchLnurlMeta(lud16) {
+  if (!LUD16_RE.test(lud16)) throw new Error('Invalid lightning address format')
   const [name, domain] = lud16.split('@')
   const res = await fetch(`https://${domain}/.well-known/lnurlp/${name}`)
   if (!res.ok) throw new Error(`Failed to reach lightning address (${res.status})`)
@@ -142,6 +146,7 @@ export async function fetchLnurlMeta(lud16) {
 
 // Returns { pr: bolt11String, verify: verifyUrlOrNull }
 export async function fetchLnurlInvoice(callbackUrl, amountMsats, comment) {
+  if (!callbackUrl.startsWith('https://')) throw new Error('LNURL callback must use HTTPS')
   const url = new URL(callbackUrl)
   url.searchParams.set('amount', String(amountMsats))
   if (comment) url.searchParams.set('comment', comment)
@@ -211,6 +216,7 @@ export async function publishDonationBoostagram({
 // ─── LUD-21 payment verify poller ────────────────────────────────────────────
 // Returns a cancel function. Calls onSettled() once when the invoice is paid.
 export function pollVerify(verifyUrl, intervalMs, onSettled) {
+  if (!verifyUrl.startsWith('https://')) return () => {}
   let active = true
   async function tick() {
     if (!active) return

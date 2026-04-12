@@ -13,6 +13,7 @@
     "@nostr-dev-kit/ndk": "^2",
     "@uiw/react-md-editor": "^4",
     "nostr-tools": "^2",
+    "qrcode": "^1.5.4",
     "qrcode.react": "^4.2.0",
     "react": "^18",
     "react-dom": "^18"

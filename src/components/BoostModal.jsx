@@ -29,6 +29,7 @@ export default function BoostModal({ user, onClose }) {
   const [eventId, setEventId] = useState('')
   const [verifyUrl, setVerifyUrl] = useState(null)
 
+  const [anonymous, setAnonymous] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
@@ -36,6 +37,7 @@ export default function BoostModal({ user, onClose }) {
 
   const stopPollRef = useRef(null)
   const donorNpub = user?.npub || ''
+  const profile = user?.profile
 
   // Resolve project owner's lud16 from their kind 0 profile on mount
   useEffect(() => {
@@ -104,20 +106,23 @@ export default function BoostModal({ user, onClose }) {
 
       // 3. Generate burner keypair, publish kind 30078, then immediately let sk fall out of scope
       const { sk: burnerSk } = generateBurnerKeypair()
-      const { eventId: eid } = await publishDonationBoostagram({
-        burnerSk,
-        paymentHash,
-        donorNpub,
-        recipientLud16: recipientLud16 || FALLBACK_LUD16,
-        amountMsats: sats * 1000,
-        message: message.trim(),
-        pageUrl: window.location.href,
-      })
-      // burnerSk is now out of scope — GC will reclaim it
+      try {
+        const { eventId: eid } = await publishDonationBoostagram({
+          burnerSk,
+          paymentHash,
+          donorNpub: anonymous ? '' : donorNpub,
+          recipientLud16: recipientLud16 || FALLBACK_LUD16,
+          amountMsats: sats * 1000,
+          message: message.trim(),
+          pageUrl: window.location.origin + window.location.pathname,
+        })
 
-      setInvoice(pr)
-      setEventId(eid)
-      setVerifyUrl(verify)
+        setInvoice(pr)
+        setEventId(eid)
+        setVerifyUrl(verify)
+      } finally {
+        burnerSk.fill(0)
+      }
     } catch (e) {
       setError(e.message)
     } finally {
@@ -192,6 +197,34 @@ export default function BoostModal({ user, onClose }) {
                     className="w-full bg-neutral-800 border border-neutral-700 rounded px-3 py-2 text-sm text-neutral-100 focus:outline-none focus:border-neutral-500"
                     placeholder="Custom amount"
                   />
+                </div>
+
+                {/* Boost as toggle */}
+                <div>
+                  <label className="block text-xs text-neutral-400 mb-1.5">Boost as</label>
+                  <div className="flex rounded-md overflow-hidden border border-neutral-700 text-xs">
+                    <button
+                      onClick={() => setAnonymous(false)}
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 transition-colors ${
+                        !anonymous ? 'bg-neutral-700 text-neutral-100' : 'bg-neutral-800 text-neutral-500 hover:text-neutral-300'
+                      }`}
+                    >
+                      {profile?.image && (
+                        <img src={profile.image} alt="" className="w-4 h-4 rounded-full object-cover" onError={e => { e.target.style.display = 'none' }} />
+                      )}
+                      <span className="truncate max-w-[140px]">
+                        {profile?.displayName || profile?.name || 'Your npub'}
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => setAnonymous(true)}
+                      className={`flex-1 py-2 px-3 border-l border-neutral-700 transition-colors ${
+                        anonymous ? 'bg-neutral-700 text-neutral-100' : 'bg-neutral-800 text-neutral-500 hover:text-neutral-300'
+                      }`}
+                    >
+                      Anon
+                    </button>
+                  </div>
                 </div>
 
                 <div>

@@ -20,6 +20,7 @@
 
 import { generateSecretKey, getPublicKey, finalizeEvent, SimplePool } from 'nostr-tools'
 import { nip19 } from 'nostr-tools'
+import QRCode from 'qrcode'
 import {
   bolt11PaymentHash,
   generateBurnerKeypair,
@@ -132,9 +133,9 @@ function injectStyles() {
   document.head.appendChild(style)
 }
 
-// ─── QR code via public API (no bundled dep needed for widget) ────────────────
-function qrImageUrl(data) {
-  return `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(data)}&size=200x200&margin=10`
+// ─── QR code (client-side, no third-party API) ──────────────────────────────
+async function qrDataUrl(data) {
+  return QRCode.toDataURL(data, { width: 200, margin: 2 })
 }
 
 // ─── Modal ────────────────────────────────────────────────────────────────────
@@ -170,13 +171,15 @@ function createModal(lud16, ownerNpub) {
 
   backdrop.addEventListener('click', close)
 
-  function render(view) {
-    modal.innerHTML = ''
+  async function render(view) {
+    while (modal.firstChild) modal.removeChild(modal.firstChild)
 
     // Header
     const header = document.createElement('div')
     header.className = 'nmd-modal-header'
-    header.innerHTML = `<h2>⚡ Send a Boost</h2>`
+    const h2 = document.createElement('h2')
+    h2.textContent = '\u26A1 Send a Boost'
+    header.appendChild(h2)
     const closeBtn = document.createElement('button')
     closeBtn.className = 'nmd-close'
     closeBtn.textContent = '✕'
@@ -189,7 +192,7 @@ function createModal(lud16, ownerNpub) {
     body.className = 'nmd-modal-body'
 
     if (view === 'form') renderForm(body)
-    if (view === 'qr') renderQR(body)
+    if (view === 'qr') await renderQR(body)
     if (view === 'paid') renderPaid(body)
 
     modal.appendChild(body)
@@ -261,33 +264,44 @@ function createModal(lud16, ownerNpub) {
     body.appendChild(boostBtn)
   }
 
-  function renderQR(body) {
+  async function renderQR(body) {
     const sats = parseInt(amount, 10)
 
-    const img = document.createElement('img')
-    img.src = qrImageUrl(`lightning:${invoice.toUpperCase()}`)
-    img.alt = 'Lightning invoice QR code'
-    img.width = 200
-    img.height = 200
-    img.style.borderRadius = '8px'
     const qrWrap = document.createElement('div')
     qrWrap.className = 'nmd-qr-wrap'
-    qrWrap.appendChild(img)
+    try {
+      const dataUrl = await qrDataUrl(`lightning:${invoice.toUpperCase()}`)
+      const img = document.createElement('img')
+      img.src = dataUrl
+      img.alt = 'Lightning invoice QR code'
+      img.width = 200
+      img.height = 200
+      img.style.borderRadius = '8px'
+      qrWrap.appendChild(img)
+    } catch {
+      const fallback = document.createElement('p')
+      fallback.className = 'nmd-notice'
+      fallback.textContent = 'QR generation failed — copy the invoice below.'
+      qrWrap.appendChild(fallback)
+    }
     body.appendChild(qrWrap)
 
     const hint = document.createElement('p')
     hint.className = 'nmd-notice nmd-center'
-    hint.textContent = `Scan with any lightning wallet · ${sats.toLocaleString()} sats`
+    hint.textContent = `Scan with any lightning wallet \u00B7 ${sats.toLocaleString()} sats`
     body.appendChild(hint)
 
     if (verifyUrl) {
       const waiting = document.createElement('p')
       waiting.className = 'nmd-notice nmd-center'
-      waiting.innerHTML = `<span class="nmd-pulse"></span> Waiting for payment…`
       waiting.style.display = 'flex'
       waiting.style.alignItems = 'center'
       waiting.style.justifyContent = 'center'
       waiting.style.gap = '8px'
+      const pulse = document.createElement('span')
+      pulse.className = 'nmd-pulse'
+      waiting.appendChild(pulse)
+      waiting.appendChild(document.createTextNode(' Waiting for payment\u2026'))
       body.appendChild(waiting)
     }
 
@@ -318,14 +332,29 @@ function createModal(lud16, ownerNpub) {
     const sats = parseInt(amount, 10)
     const success = document.createElement('div')
     success.className = 'nmd-success'
-    success.innerHTML = `
-      <div class="nmd-success-icon">✓</div>
-      <div>
-        <p style="margin:0;font-size:16px;font-weight:600;color:#4ade80">${sats.toLocaleString()} sats received!</p>
-        <p style="margin:4px 0 0;font-size:12px;color:#737373">Thanks for the boost ⚡</p>
-      </div>
-      ${eventId ? `<p class="nmd-receipt">receipt: ${eventId.slice(0, 16)}…</p>` : ''}
-    `
+
+    const icon = document.createElement('div')
+    icon.className = 'nmd-success-icon'
+    icon.textContent = '\u2713'
+    success.appendChild(icon)
+
+    const info = document.createElement('div')
+    const amtP = document.createElement('p')
+    amtP.style.cssText = 'margin:0;font-size:16px;font-weight:600;color:#4ade80'
+    amtP.textContent = `${sats.toLocaleString()} sats received!`
+    info.appendChild(amtP)
+    const thanksP = document.createElement('p')
+    thanksP.style.cssText = 'margin:4px 0 0;font-size:12px;color:#737373'
+    thanksP.textContent = 'Thanks for the boost \u26A1'
+    info.appendChild(thanksP)
+    success.appendChild(info)
+
+    if (eventId) {
+      const receipt = document.createElement('p')
+      receipt.className = 'nmd-receipt'
+      receipt.textContent = `receipt: ${eventId.slice(0, 16)}\u2026`
+      success.appendChild(receipt)
+    }
     const closeBtn2 = document.createElement('button')
     closeBtn2.className = 'nmd-btn'
     closeBtn2.style.background = '#166534'
@@ -379,18 +408,22 @@ function createModal(lud16, ownerNpub) {
         const { pr, verify } = await fetchLnurlInvoice(lnurlMeta.callback, sats * 1000, trimmedComment)
         const paymentHash = bolt11PaymentHash(pr) || crypto.randomUUID().replace(/-/g, '')
         const { sk: burnerSk } = generateBurnerKeypair()
-        const { eventId: eid } = await publishDonationBoostagram({
-          burnerSk,
-          paymentHash,
-          donorNpub: '',  // widget has no login session
-          recipientLud16: lud16,
-          amountMsats: sats * 1000,
-          message: message.trim(),
-          pageUrl: window.location.href,
-        })
-        invoice = pr
-        eventId = eid
-        verifyUrl = verify
+        try {
+          const { eventId: eid } = await publishDonationBoostagram({
+            burnerSk,
+            paymentHash,
+            donorNpub: '',  // widget has no login session
+            recipientLud16: lud16,
+            amountMsats: sats * 1000,
+            message: message.trim(),
+            pageUrl: window.location.origin + window.location.pathname,
+          })
+          invoice = pr
+          eventId = eid
+          verifyUrl = verify
+        } finally {
+          burnerSk.fill(0)
+        }
       }
 
       render('qr')
@@ -427,13 +460,21 @@ function createModal(lud16, ownerNpub) {
 // ─── Bootstrap ───────────────────────────────────────────────────────────────
 async function initWidget(container) {
   const ownerNpub = container.getAttribute('data-npub')
+
+  function setNotice(text) {
+    while (container.firstChild) container.removeChild(container.firstChild)
+    const span = document.createElement('span')
+    span.style.cssText = 'font-size:12px;color:#737373;font-family:system-ui,sans-serif'
+    span.textContent = text
+    container.appendChild(span)
+  }
+
   if (!ownerNpub) {
-    container.innerHTML = '<span style="font-size:12px;color:#737373;font-family:system-ui,sans-serif">nostrmd-boost: missing data-npub</span>'
+    setNotice('nostrmd-boost: missing data-npub')
     return
   }
 
-  // Show loading state
-  container.innerHTML = '<span style="font-size:12px;color:#737373;font-family:system-ui,sans-serif">⚡…</span>'
+  setNotice('\u26A1\u2026')
 
   let lud16
   try {
@@ -443,15 +484,14 @@ async function initWidget(container) {
   }
 
   if (!lud16) {
-    container.innerHTML = '<span style="font-size:12px;color:#737373;font-family:system-ui,sans-serif">Lightning address not configured on this Nostr profile.</span>'
+    setNotice('Lightning address not configured on this Nostr profile.')
     return
   }
 
-  // Render boost button
-  container.innerHTML = ''
+  while (container.firstChild) container.removeChild(container.firstChild)
   const btn = document.createElement('button')
   btn.className = 'nmd-btn'
-  btn.innerHTML = '⚡ Boost'
+  btn.textContent = '\u26A1 Boost'
   btn.setAttribute('aria-label', 'Send a lightning boost')
   btn.addEventListener('click', () => createModal(lud16, ownerNpub))
   container.appendChild(btn)
