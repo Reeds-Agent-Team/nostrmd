@@ -35,6 +35,7 @@ export default function App() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
   const [pendingDraft, setPendingDraft] = useState(null)
+  const [naddr, setNaddr] = useState('')
 
   const readOnly = !!user?.readOnly
   const { saveDraft, loadDraft, clearDraft } = useDraft(user?.pubkey)
@@ -59,6 +60,7 @@ export default function App() {
     setSource(defaultSource())
     setDrawerOpen(false)
     setPendingDraft(null)
+    setNaddr('')
   }
 
   function handleRestoreDraft() {
@@ -76,10 +78,11 @@ export default function App() {
   }
 
   // Called when user clicks an article in the drawer
-  function handleLoadArticle({ content: loadedContent, metadata: loadedMetadata }) {
+  function handleLoadArticle({ content: loadedContent, metadata: loadedMetadata, naddr: loadedNaddr = '' }) {
     setContent(loadedContent)
     setMetadata(loadedMetadata)
     setSource(defaultSource())
+    setNaddr(loadedNaddr)
     setActiveTab('write') // switch to write tab so the loaded content is visible
   }
 
@@ -92,6 +95,7 @@ export default function App() {
     setContent('')
     setMetadata(defaultMetadata())
     setSource(defaultSource())
+    setNaddr('')
   }
 
   return (
@@ -139,6 +143,7 @@ export default function App() {
                 onFileLoad={handleLoadArticle}
                 readOnly={readOnly}
                 user={user}
+                naddr={naddr}
               />
             </div>
 

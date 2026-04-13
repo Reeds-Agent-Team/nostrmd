@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { nip19 } from 'nostr-tools'
 import { getNDK } from '../lib/ndk.js'
 
 // Pulls a single tag value from an event's tag array
@@ -50,6 +51,15 @@ export default function ArticleDrawer({ user, onLoad, onClose }) {
 
     const tTags = event.tags.filter(t => t[0] === 't').map(t => t[1])
 
+    // Construct naddr so the epub can link back to the published Nostr article
+    let naddr = ''
+    try {
+      const identifier = getTag(event, 'd')
+      naddr = nip19.naddrEncode({ kind: 30023, pubkey: event.pubkey, identifier })
+    } catch {
+      // Non-fatal — epub will just omit dc:source
+    }
+
     onLoad({
       content: event.content,
       metadata: {
@@ -60,6 +70,7 @@ export default function ArticleDrawer({ user, onLoad, onClose }) {
         tagsRaw: tTags.join(', '),
         tags: tTags,
       },
+      naddr,
     })
     onClose()
   }

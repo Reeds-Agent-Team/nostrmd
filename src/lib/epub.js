@@ -162,8 +162,13 @@ function containerXml() {
 </container>`
 }
 
-function contentOpf({ bookId, title, author, lang, date, modified, hasCover }) {
+function contentOpf({ bookId, title, author, description, subjects, lang, date, modified, hasCover, naddr }) {
   const creatorTag = author ? `\n    <dc:creator>${esc(author)}</dc:creator>` : ''
+  const descTag = description ? `\n    <dc:description>${esc(description)}</dc:description>` : ''
+  const subjectTags = subjects.map(s => `\n    <dc:subject>${esc(s)}</dc:subject>`).join('')
+  const publisherTag = '\n    <dc:publisher>NostrMD</dc:publisher>'
+  const createdTag = date ? `\n    <meta property="dcterms:created">${esc(date)}</meta>` : ''
+  const sourceTag = naddr ? `\n    <dc:source>https://njump.me/${esc(naddr)}</dc:source>` : ''
   const coverMeta = hasCover ? '\n    <meta name="cover" content="cover-image"/>' : ''
   const coverManifest = hasCover
     ? '\n    <item id="cover-image" href="cover.jpg" media-type="image/jpeg" properties="cover-image"/>\n    <item id="cover-page" href="cover.xhtml" media-type="application/xhtml+xml"/>'
@@ -174,9 +179,9 @@ function contentOpf({ bookId, title, author, lang, date, modified, hasCover }) {
 <package version="3.0" unique-identifier="book-id" xmlns="http://www.idpf.org/2007/opf">
   <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
     <dc:identifier id="book-id">urn:uuid:${bookId}</dc:identifier>
-    <dc:title>${esc(title)}</dc:title>${creatorTag}
+    <dc:title>${esc(title)}</dc:title>${creatorTag}${descTag}${subjectTags}${publisherTag}${sourceTag}
     <dc:language>${esc(lang)}</dc:language>
-    <dc:date>${esc(date)}</dc:date>
+    <dc:date>${esc(date)}</dc:date>${createdTag}
     <meta property="dcterms:modified">${esc(modified)}</meta>${coverMeta}
   </metadata>
   <manifest>
@@ -332,7 +337,7 @@ function uuid4() {
   })
 }
 
-export async function exportEpub(content, metadata, source, author = '') {
+export async function exportEpub(content, metadata, source, author = '', naddr = '') {
   const zip = new JSZip()
 
   const bookId = uuid4()
@@ -352,7 +357,12 @@ export async function exportEpub(content, metadata, source, author = '') {
   // mimetype must be first and stored uncompressed — epub spec requirement
   zip.file('mimetype', 'application/epub+zip', { compression: 'STORE' })
   zip.file('META-INF/container.xml', containerXml())
-  zip.file('OEBPS/content.opf', contentOpf({ bookId, title, author, lang, date, modified, hasCover }))
+  zip.file('OEBPS/content.opf', contentOpf({
+    bookId, title, author,
+    description: metadata.summary || '',
+    subjects: metadata.tags || [],
+    lang, date, modified, hasCover, naddr,
+  }))
   zip.file('OEBPS/toc.ncx', tocNcx({ bookId, title }))
   zip.file('OEBPS/nav.xhtml', navXhtml({ title }))
   zip.file('OEBPS/style.css', styleCss())

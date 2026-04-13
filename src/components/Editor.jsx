@@ -4,7 +4,7 @@ import { isSafeUrl, parseDateString, parseFrontmatter, buildFrontmatter, titleTo
 import { uploadToBlossom } from '../lib/blossom.js'
 import { exportEpub } from '../lib/epub.js'
 
-export default function Editor({ content, onChange, activeTab, onTabChange, metadata, source, onClear, onFileLoad, readOnly, user }) {
+export default function Editor({ content, onChange, activeTab, onTabChange, metadata, source, onClear, onFileLoad, readOnly, user, naddr }) {
   const fileInputRef = useRef(null)
   const imageInputRef = useRef(null)
   const [clearPending, setClearPending] = useState(false)
@@ -140,7 +140,7 @@ export default function Editor({ content, onChange, activeTab, onTabChange, meta
     setEpubError('')
     try {
       const author = user?.profile?.displayName || user?.profile?.name || ''
-      await exportEpub(content, metadata, source, author)
+      await exportEpub(content, metadata, source, author, naddr)
     } catch (err) {
       console.error('epub export failed:', err)
       setEpubError(err.message || 'Export failed.')
