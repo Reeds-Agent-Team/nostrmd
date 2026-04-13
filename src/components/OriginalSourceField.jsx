@@ -1,7 +1,7 @@
 // Collects original source info and publication date.
 // The attribution line is prepended to content before signing — not stored as a separate tag.
 // The publishedAtDate is stored as the NIP-23 published_at tag.
-export default function OriginalSourceField({ source, onChange, metadata, onMetadataChange }) {
+export default function OriginalSourceField({ source, onChange, metadata, onMetadataChange, readOnly }) {
   function updateSource(field, value) {
     onChange({ ...source, [field]: value })
   }
@@ -26,7 +26,8 @@ export default function OriginalSourceField({ source, onChange, metadata, onMeta
           value={source.name}
           onChange={e => updateSource('name', e.target.value)}
           placeholder="Substack, Medium, My Blog..."
-          className="w-full px-3 py-2 rounded bg-neutral-900 border border-neutral-700 text-neutral-100 placeholder-neutral-600 focus:outline-none focus:border-purple-600 text-sm"
+          disabled={readOnly}
+          className="w-full px-3 py-2 rounded bg-neutral-900 border border-neutral-700 text-neutral-100 placeholder-neutral-600 focus:outline-none focus:border-purple-600 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
         />
       </div>
 
@@ -40,7 +41,8 @@ export default function OriginalSourceField({ source, onChange, metadata, onMeta
           value={source.url}
           onChange={e => updateSource('url', e.target.value)}
           placeholder="https://yourname.substack.com/p/article"
-          className="w-full px-3 py-2 rounded bg-neutral-900 border border-neutral-700 text-neutral-100 placeholder-neutral-600 focus:outline-none focus:border-purple-600 text-sm font-mono"
+          disabled={readOnly}
+          className="w-full px-3 py-2 rounded bg-neutral-900 border border-neutral-700 text-neutral-100 placeholder-neutral-600 focus:outline-none focus:border-purple-600 text-sm font-mono disabled:opacity-40 disabled:cursor-not-allowed"
         />
       </div>
 
@@ -53,7 +55,8 @@ export default function OriginalSourceField({ source, onChange, metadata, onMeta
           type="date"
           value={metadata.publishedAtDate}
           onChange={e => onMetadataChange({ ...metadata, publishedAtDate: e.target.value })}
-          className="w-full px-3 py-2 rounded bg-neutral-900 border border-neutral-700 text-neutral-100 focus:outline-none focus:border-purple-600 text-sm"
+          disabled={readOnly}
+          className="w-full px-3 py-2 rounded bg-neutral-900 border border-neutral-700 text-neutral-100 focus:outline-none focus:border-purple-600 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
         />
         <p className="text-xs text-neutral-600">Shown as the publication date in Habla, Highlighter, etc.</p>
       </div>

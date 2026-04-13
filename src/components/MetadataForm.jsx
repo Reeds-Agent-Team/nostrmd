@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { uploadToBlossom } from '../lib/blossom.js'
 
-export default function MetadataForm({ metadata, onChange }) {
+export default function MetadataForm({ metadata, onChange, readOnly }) {
   const coverInputRef = useRef(null)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
@@ -52,7 +52,8 @@ export default function MetadataForm({ metadata, onChange }) {
           value={metadata.title}
           onChange={e => update('title', e.target.value)}
           placeholder="Article title"
-          className="w-full px-3 py-2 rounded bg-neutral-900 border border-neutral-700 text-neutral-100 placeholder-neutral-600 focus:outline-none focus:border-purple-600 text-sm"
+          disabled={readOnly}
+          className="w-full px-3 py-2 rounded bg-neutral-900 border border-neutral-700 text-neutral-100 placeholder-neutral-600 focus:outline-none focus:border-purple-600 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
           aria-required="true"
         />
       </div>
@@ -68,7 +69,8 @@ export default function MetadataForm({ metadata, onChange }) {
           value={metadata.summary}
           onChange={e => update('summary', e.target.value)}
           placeholder="Optional subtitle or summary"
-          className="w-full px-3 py-2 rounded bg-neutral-900 border border-neutral-700 text-neutral-100 placeholder-neutral-600 focus:outline-none focus:border-purple-600 text-sm"
+          disabled={readOnly}
+          className="w-full px-3 py-2 rounded bg-neutral-900 border border-neutral-700 text-neutral-100 placeholder-neutral-600 focus:outline-none focus:border-purple-600 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
         />
       </div>
 
@@ -84,12 +86,13 @@ export default function MetadataForm({ metadata, onChange }) {
             value={metadata.image}
             onChange={e => update('image', e.target.value)}
             placeholder="https://..."
-            className="flex-1 min-w-0 px-3 py-2 rounded bg-neutral-900 border border-neutral-700 text-neutral-100 placeholder-neutral-600 focus:outline-none focus:border-purple-600 text-sm font-mono"
+            disabled={readOnly}
+            className="flex-1 min-w-0 px-3 py-2 rounded bg-neutral-900 border border-neutral-700 text-neutral-100 placeholder-neutral-600 focus:outline-none focus:border-purple-600 text-sm font-mono disabled:opacity-40 disabled:cursor-not-allowed"
           />
           <button
             type="button"
             onClick={() => coverInputRef.current?.click()}
-            disabled={uploading}
+            disabled={uploading || readOnly}
             className="px-3 py-2 rounded border border-neutral-700 text-neutral-500 hover:text-neutral-200 hover:border-neutral-500 text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
             aria-label="Upload cover image to Blossom"
           >
@@ -120,7 +123,8 @@ export default function MetadataForm({ metadata, onChange }) {
           value={metadata.tagsRaw}
           onChange={e => handleTagsInput(e.target.value)}
           placeholder="writing, nostr, essay"
-          className="w-full px-3 py-2 rounded bg-neutral-900 border border-neutral-700 text-neutral-100 placeholder-neutral-600 focus:outline-none focus:border-purple-600 text-sm"
+          disabled={readOnly}
+          className="w-full px-3 py-2 rounded bg-neutral-900 border border-neutral-700 text-neutral-100 placeholder-neutral-600 focus:outline-none focus:border-purple-600 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
         />
         <p className="text-xs text-neutral-600">Comma-separated. # is optional.</p>
       </div>

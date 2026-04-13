@@ -3,7 +3,7 @@ import MDEditor, { commands } from '@uiw/react-md-editor'
 import { isSafeUrl, parseDateString, parseFrontmatter, buildFrontmatter, titleToSlug } from '../lib/utils.js'
 import { uploadToBlossom } from '../lib/blossom.js'
 
-export default function Editor({ content, onChange, activeTab, onTabChange, metadata, source, onClear, onFileLoad }) {
+export default function Editor({ content, onChange, activeTab, onTabChange, metadata, source, onClear, onFileLoad, readOnly }) {
   const fileInputRef = useRef(null)
   const imageInputRef = useRef(null)
   const [clearPending, setClearPending] = useState(false)
@@ -137,10 +137,13 @@ export default function Editor({ content, onChange, activeTab, onTabChange, meta
       <div className="flex items-center gap-1 px-4 pt-4 pb-2 border-b border-neutral-800">
         <button
           onClick={() => { onTabChange('upload'); fileInputRef.current?.click() }}
+          disabled={readOnly}
           className={`px-4 py-1.5 rounded text-sm transition-colors ${
-            activeTab === 'upload'
-              ? 'bg-neutral-800 text-neutral-100'
-              : 'text-neutral-500 hover:text-neutral-300'
+            readOnly
+              ? 'text-neutral-700 cursor-not-allowed'
+              : activeTab === 'upload'
+                ? 'bg-neutral-800 text-neutral-100'
+                : 'text-neutral-500 hover:text-neutral-300'
           }`}
           aria-pressed={activeTab === 'upload'}
         >
@@ -148,10 +151,13 @@ export default function Editor({ content, onChange, activeTab, onTabChange, meta
         </button>
         <button
           onClick={() => onTabChange('write')}
+          disabled={readOnly}
           className={`px-4 py-1.5 rounded text-sm transition-colors ${
-            activeTab === 'write'
-              ? 'bg-neutral-800 text-neutral-100'
-              : 'text-neutral-500 hover:text-neutral-300'
+            readOnly
+              ? 'text-neutral-700 cursor-not-allowed'
+              : activeTab === 'write'
+                ? 'bg-neutral-800 text-neutral-100'
+                : 'text-neutral-500 hover:text-neutral-300'
           }`}
           aria-pressed={activeTab === 'write'}
         >
@@ -166,7 +172,7 @@ export default function Editor({ content, onChange, activeTab, onTabChange, meta
           aria-hidden="true"
         />
 
-        {/* Export + Clear — only shown when there's something to work with */}
+        {/* Export always shown in read-only when there's content; Clear hidden in read-only */}
         {(content || metadata?.title) && (
           <div className="ml-auto flex items-center gap-1">
             <button
@@ -176,17 +182,19 @@ export default function Editor({ content, onChange, activeTab, onTabChange, meta
             >
               Export .md
             </button>
-            <button
-              onClick={handleClearClick}
-              className={`px-3 py-1.5 text-sm rounded border transition-colors ${
-                clearPending
-                  ? 'border-red-800 text-red-400 hover:bg-red-950'
-                  : 'border-neutral-700 text-neutral-500 hover:text-red-400 hover:border-red-900'
-              }`}
-              aria-label={clearPending ? 'Confirm clear' : 'Clear editor and reset all fields'}
-            >
-              {clearPending ? 'Sure?' : 'Clear'}
-            </button>
+            {!readOnly && (
+              <button
+                onClick={handleClearClick}
+                className={`px-3 py-1.5 text-sm rounded border transition-colors ${
+                  clearPending
+                    ? 'border-red-800 text-red-400 hover:bg-red-950'
+                    : 'border-neutral-700 text-neutral-500 hover:text-red-400 hover:border-red-900'
+                }`}
+                aria-label={clearPending ? 'Confirm clear' : 'Clear editor and reset all fields'}
+              >
+                {clearPending ? 'Sure?' : 'Clear'}
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -196,7 +204,7 @@ export default function Editor({ content, onChange, activeTab, onTabChange, meta
 
         {/* Left: raw markdown editor, no built-in preview */}
         <div
-          className="w-1/2 overflow-hidden border-r border-neutral-800 relative"
+          className={`w-1/2 overflow-hidden border-r border-neutral-800 relative ${readOnly ? 'pointer-events-none opacity-40' : ''}`}
           onDrop={handleEditorDrop}
           onDragOver={e => e.preventDefault()}
           onPaste={handleEditorPaste}

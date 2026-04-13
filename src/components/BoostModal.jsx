@@ -15,7 +15,7 @@ import {
 const POLL_INTERVAL_MS = 2500
 const PRESETS = [21, 210, 2100, 21000]
 
-export default function BoostModal({ user, onClose }) {
+export default function BoostModal({ user, onClose, readOnly }) {
   const [amount, setAmount] = useState('21')
   const [message, setMessage] = useState('')
 
@@ -29,7 +29,7 @@ export default function BoostModal({ user, onClose }) {
   const [eventId, setEventId] = useState('')
   const [verifyUrl, setVerifyUrl] = useState(null)
 
-  const [anonymous, setAnonymous] = useState(false)
+  const [anonymous, setAnonymous] = useState(!!readOnly)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
@@ -205,8 +205,11 @@ export default function BoostModal({ user, onClose }) {
                   <div className="flex rounded-md overflow-hidden border border-neutral-700 text-xs">
                     <button
                       onClick={() => setAnonymous(false)}
+                      disabled={readOnly}
                       className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 transition-colors ${
-                        !anonymous ? 'bg-neutral-700 text-neutral-100' : 'bg-neutral-800 text-neutral-500 hover:text-neutral-300'
+                        readOnly
+                          ? 'bg-neutral-900 text-neutral-700 cursor-not-allowed opacity-40'
+                          : !anonymous ? 'bg-neutral-700 text-neutral-100' : 'bg-neutral-800 text-neutral-500 hover:text-neutral-300'
                       }`}
                     >
                       {profile?.image && (

@@ -36,18 +36,19 @@ export default function App() {
   const [helpOpen, setHelpOpen] = useState(false)
   const [pendingDraft, setPendingDraft] = useState(null)
 
+  const readOnly = !!user?.readOnly
   const { saveDraft, loadDraft, clearDraft } = useDraft(user?.pubkey)
 
-  // On login, check for a saved draft
+  // On login, check for a saved draft (not applicable in read-only mode)
   useEffect(() => {
-    if (!user) return
+    if (!user || readOnly) return
     const draft = loadDraft()
     if (draft) setPendingDraft(draft)
   }, [user])
 
-  // Auto-save whenever content, metadata, or source changes
+  // Auto-save whenever content, metadata, or source changes (not in read-only mode)
   useEffect(() => {
-    if (!user) return
+    if (!user || readOnly) return
     saveDraft(content, metadata, source)
   }, [content, metadata, source])
 
@@ -99,7 +100,7 @@ export default function App() {
         <LoginScreen onLogin={setUser} />
       ) : (
         <div className="flex flex-col h-screen">
-          <Header user={user} onLogout={handleLogout} onOpenArticles={() => setDrawerOpen(true)} onOpenHelp={() => setHelpOpen(true)} />
+          <Header user={user} onLogout={handleLogout} onOpenArticles={() => setDrawerOpen(true)} onOpenHelp={() => setHelpOpen(true)} readOnly={readOnly} />
 
           {/* Draft restore banner — shown once after login if a saved draft exists */}
           {pendingDraft && (
@@ -136,17 +137,19 @@ export default function App() {
                 source={source}
                 onClear={handlePublishAnother}
                 onFileLoad={handleLoadArticle}
+                readOnly={readOnly}
               />
             </div>
 
             {/* Sidebar: metadata + source + publish */}
             <div className="w-80 flex flex-col overflow-y-auto bg-neutral-950">
-              <MetadataForm metadata={metadata} onChange={setMetadata} />
+              <MetadataForm metadata={metadata} onChange={setMetadata} readOnly={readOnly} />
               <OriginalSourceField
                 source={source}
                 onChange={setSource}
                 metadata={metadata}
                 onMetadataChange={setMetadata}
+                readOnly={readOnly}
               />
               <div className="p-4 mt-auto border-t border-neutral-800">
                 <PublishButton
@@ -156,6 +159,7 @@ export default function App() {
                   user={user}
                   onPublishAnother={handlePublishAnother}
                   onPublishSuccess={handlePublishSuccess}
+                  readOnly={readOnly}
                 />
               </div>
             </div>

@@ -9,7 +9,7 @@ const STATE = {
   ERROR: 'error',
 }
 
-export default function PublishButton({ content, metadata, source, user, onPublishAnother, onPublishSuccess }) {
+export default function PublishButton({ content, metadata, source, user, onPublishAnother, onPublishSuccess, readOnly }) {
   const [state, setState] = useState(STATE.IDLE)
   const [result, setResult] = useState(null) // { nevent, relays }
   const [error, setError] = useState('')
@@ -77,6 +77,18 @@ export default function PublishButton({ content, metadata, source, user, onPubli
     setResult(null)
     setError('')
     onPublishAnother()
+  }
+
+  if (readOnly) {
+    return (
+      <button
+        disabled
+        className="w-full py-3 px-4 rounded bg-neutral-800 opacity-40 cursor-not-allowed text-neutral-500 font-medium text-sm border border-neutral-700"
+        aria-label="Publishing unavailable in read-only mode"
+      >
+        Publish to Nostr
+      </button>
+    )
   }
 
   // Success state

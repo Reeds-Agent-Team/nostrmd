@@ -20,7 +20,7 @@ function GitHubIcon() {
   )
 }
 
-export default function Header({ user, onLogout, onOpenArticles, onOpenHelp }) {
+export default function Header({ user, onLogout, onOpenArticles, onOpenHelp, readOnly }) {
   const [boostOpen, setBoostOpen] = useState(false)
   const profile = user?.profile
   const npub = user?.npub || ''
@@ -110,7 +110,7 @@ export default function Header({ user, onLogout, onOpenArticles, onOpenHelp }) {
       </div>
 
       {/* Boost modal */}
-      {boostOpen && <BoostModal user={user} onClose={() => setBoostOpen(false)} />}
+      {boostOpen && <BoostModal user={user} onClose={() => setBoostOpen(false)} readOnly={readOnly} />}
     </header>
   )
 }

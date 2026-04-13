@@ -58,6 +58,11 @@ export default function HelpModal({ onClose }) {
                 <span className="text-neutral-300">Login with Key</span> — paste your <code className="text-purple-400">nsec1...</code> key directly.
                 It is held in memory only and is never written to storage. It clears when you log out or refresh the page.
               </p>
+              <p>
+                <span className="text-neutral-300">Login with npub</span> — paste your <code className="text-purple-400">npub1...</code> public key for
+                read-only access. You can browse your published long-form notes via <span className="text-neutral-300">My Articles</span>, preview them,
+                and download them as <code className="text-purple-400">.md</code> files. Publishing is disabled.
+              </p>
             </section>
 
             <section className="space-y-2">

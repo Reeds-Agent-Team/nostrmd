@@ -106,37 +106,44 @@ export default function LoginScreen({ onLogin }) {
     }
   }
 
-  async function loginWithNsec() {
+  async function loginWithKey() {
     setError('')
     cancelActiveQrFlow()
-    if (!nsecValue.trim()) {
-      setError('Please enter your nsec key.')
+    const val = nsecValue.trim()
+    if (!val) {
+      setError('Please enter your nsec or npub key.')
       return
     }
     setLoading(true)
     try {
-      // Decode nsec → raw private key hex
-      const decoded = nip19.decode(nsecValue.trim())
-      if (decoded.type !== 'nsec') {
-        throw new Error('Input is not a valid nsec key.')
-      }
-      const privkeyHex = decoded.data
-
-      const signer = new NDKPrivateKeySigner(privkeyHex)
+      const decoded = nip19.decode(val)
       const ndk = getNDK()
-      ndk.signer = signer
 
-      // Fire relay connections in the background
-      ndk.connect().catch(() => {})
+      if (decoded.type === 'npub') {
+        // Read-only login — no signer, just connect and fetch profile
+        ndk.connect().catch(() => {})
+        const user = await fetchUserProfile(ndk, decoded.data)
+        user.readOnly = true
+        onLogin(user)
+      } else if (decoded.type === 'nsec') {
+        // Decode nsec → raw private key hex
+        const signer = new NDKPrivateKeySigner(decoded.data)
+        ndk.signer = signer
 
-      const ndkUser = await signer.user()
-      const user = await fetchUserProfile(ndk, ndkUser.pubkey)
-      onLogin(user)
+        // Fire relay connections in the background
+        ndk.connect().catch(() => {})
+
+        const ndkUser = await signer.user()
+        const user = await fetchUserProfile(ndk, ndkUser.pubkey)
+        onLogin(user)
+      } else {
+        throw new Error('Input must be an nsec or npub key.')
+      }
     } catch (err) {
-      setError(err.message || 'Invalid nsec key.')
+      setError(err.message || 'Invalid key.')
     } finally {
       setLoading(false)
-      // Clear the input field — key should not linger in the DOM
+      // Clear the input field — nsec should not linger in the DOM
       setNsecValue('')
     }
   }
@@ -354,37 +361,44 @@ export default function LoginScreen({ onLogin }) {
           <div className="flex-1 h-px bg-neutral-800" />
         </div>
 
-        {/* nsec direct input */}
+        {/* nsec / npub direct input */}
         <div className="space-y-3">
           <div className="space-y-1">
             <label htmlFor="nsec-input" className="block text-sm text-neutral-400">
-              Private key (nsec)
+              Private key (nsec) or public key (npub)
             </label>
             <input
               id="nsec-input"
-              type="password"
+              type={nsecValue.startsWith('npub') ? 'text' : 'password'}
               value={nsecValue}
               onChange={e => setNsecValue(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && loginWithNsec()}
-              placeholder="nsec1..."
+              onKeyDown={e => e.key === 'Enter' && loginWithKey()}
+              placeholder="nsec1... or npub1..."
               autoComplete="off"
               spellCheck={false}
               className="w-full px-4 py-3 rounded-lg bg-neutral-900 border border-neutral-700 text-neutral-100 placeholder-neutral-600 focus:outline-none focus:border-purple-600 font-mono text-sm"
-              aria-label="Nostr private key input"
+              aria-label="Nostr key input"
             />
           </div>
 
-          {/* Security warning */}
-          <p className="text-xs text-amber-500/80 leading-relaxed">
-            Your key is held in memory only and will be cleared when you close or refresh this page.
-            It is never written to storage.
-          </p>
+          {/* Security warning — only relevant for nsec */}
+          {!nsecValue.startsWith('npub') && (
+            <p className="text-xs text-amber-500/80 leading-relaxed">
+              Your key is held in memory only and will be cleared when you close or refresh this page.
+              It is never written to storage.
+            </p>
+          )}
+          {nsecValue.startsWith('npub') && (
+            <p className="text-xs text-neutral-600 leading-relaxed">
+              npub login is read-only. You can browse and download your articles but cannot publish.
+            </p>
+          )}
 
           <button
-            onClick={loginWithNsec}
+            onClick={loginWithKey}
             disabled={loading || !nsecValue.trim()}
             className="w-full py-3 px-4 rounded-lg bg-neutral-800 hover:bg-neutral-700 disabled:opacity-40 disabled:cursor-not-allowed text-neutral-100 font-medium transition-colors border border-neutral-700"
-            aria-label="Login with nsec private key"
+            aria-label="Login with nsec or npub key"
           >
             {loading ? 'Connecting...' : 'Login with Key'}
           </button>
