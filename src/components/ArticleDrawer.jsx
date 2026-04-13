@@ -24,6 +24,31 @@ export default function ArticleDrawer({ user, onLoad, onClose }) {
     async function fetchArticles() {
       try {
         const ndk = getNDK()
+
+        // Fetch the user's Kind 10002 relay list and add any write relays to the pool.
+        // This is critical for read-only (npub) logins where no signer is set and NDK
+        // has never fetched the user's relay preferences — without this we only query
+        // the hardcoded fallback relays, which may not have this user's articles.
+        try {
+          const relayListEvent = await Promise.race([
+            ndk.fetchEvent({ kinds: [10002], authors: [user.pubkey] }),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000)),
+          ])
+          if (relayListEvent) {
+            const writeRelays = relayListEvent.tags
+              .filter(t => t[0] === 'r' && (!t[2] || t[2] === 'write'))
+              .map(t => t[1])
+              .filter(Boolean)
+            for (const url of writeRelays) {
+              try { ndk.addExplicitRelay(url) } catch { /* non-fatal */ }
+            }
+            // Give newly added relays a moment to connect before querying
+            if (writeRelays.length) await new Promise(res => setTimeout(res, 1000))
+          }
+        } catch {
+          // Non-fatal — continue with whatever relays are already connected
+        }
+
         const events = await Promise.race([
           ndk.fetchEvents({ kinds: [30023], authors: [user.pubkey] }),
           new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 10000)),
