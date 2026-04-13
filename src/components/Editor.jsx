@@ -2,11 +2,13 @@ import { useRef, useState, useEffect } from 'react'
 import MDEditor, { commands } from '@uiw/react-md-editor'
 import { isSafeUrl, parseDateString, parseFrontmatter, buildFrontmatter, titleToSlug } from '../lib/utils.js'
 import { uploadToBlossom } from '../lib/blossom.js'
+import { exportEpub } from '../lib/epub.js'
 
 export default function Editor({ content, onChange, activeTab, onTabChange, metadata, source, onClear, onFileLoad, readOnly }) {
   const fileInputRef = useRef(null)
   const imageInputRef = useRef(null)
   const [clearPending, setClearPending] = useState(false)
+  const [epubExporting, setEpubExporting] = useState(false)
   const clearTimerRef = useRef(null)
   const [imageUploading, setImageUploading] = useState(false)
   const [imageError, setImageError] = useState('')
@@ -131,6 +133,16 @@ export default function Editor({ content, onChange, activeTab, onTabChange, meta
     URL.revokeObjectURL(url)
   }
 
+  async function handleEpubExport() {
+    if (epubExporting) return
+    setEpubExporting(true)
+    try {
+      await exportEpub(content, metadata, source)
+    } finally {
+      setEpubExporting(false)
+    }
+  }
+
   return (
     <div className="flex flex-col h-full" data-color-mode="dark">
       {/* Tab switcher */}
@@ -181,6 +193,14 @@ export default function Editor({ content, onChange, activeTab, onTabChange, meta
               aria-label="Export as markdown file with frontmatter"
             >
               Export .md
+            </button>
+            <button
+              onClick={handleEpubExport}
+              disabled={epubExporting}
+              className="px-3 py-1.5 text-sm rounded border border-neutral-700 text-neutral-500 hover:text-neutral-200 hover:border-neutral-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              aria-label="Export as epub for ereaders"
+            >
+              {epubExporting ? 'Exporting…' : 'Export .epub'}
             </button>
             {!readOnly && (
               <button
