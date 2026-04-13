@@ -138,6 +138,7 @@ export default function App() {
                 onClear={handlePublishAnother}
                 onFileLoad={handleLoadArticle}
                 readOnly={readOnly}
+                user={user}
               />
             </div>
 

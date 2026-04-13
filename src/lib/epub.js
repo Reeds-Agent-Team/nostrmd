@@ -31,12 +31,13 @@ function containerXml() {
 </container>`
 }
 
-function contentOpf({ bookId, title, lang, date, modified }) {
+function contentOpf({ bookId, title, author, lang, date, modified }) {
+  const creatorTag = author ? `\n    <dc:creator>${esc(author)}</dc:creator>` : ''
   return `<?xml version="1.0" encoding="UTF-8"?>
 <package version="3.0" unique-identifier="book-id" xmlns="http://www.idpf.org/2007/opf">
   <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
     <dc:identifier id="book-id">urn:uuid:${bookId}</dc:identifier>
-    <dc:title>${esc(title)}</dc:title>
+    <dc:title>${esc(title)}</dc:title>${creatorTag}
     <dc:language>${esc(lang)}</dc:language>
     <dc:date>${esc(date)}</dc:date>
     <meta property="dcterms:modified">${esc(modified)}</meta>
@@ -185,7 +186,7 @@ function uuid4() {
   })
 }
 
-export async function exportEpub(content, metadata, source) {
+export async function exportEpub(content, metadata, source, author = '') {
   const zip = new JSZip()
 
   const bookId = uuid4()
@@ -200,7 +201,7 @@ export async function exportEpub(content, metadata, source) {
   // mimetype must be first and stored uncompressed — epub spec requirement
   zip.file('mimetype', 'application/epub+zip', { compression: 'STORE' })
   zip.file('META-INF/container.xml', containerXml())
-  zip.file('OEBPS/content.opf', contentOpf({ bookId, title, lang, date, modified }))
+  zip.file('OEBPS/content.opf', contentOpf({ bookId, title, author, lang, date, modified }))
   zip.file('OEBPS/toc.ncx', tocNcx({ bookId, title }))
   zip.file('OEBPS/nav.xhtml', navXhtml({ title }))
   zip.file('OEBPS/style.css', styleCss())
