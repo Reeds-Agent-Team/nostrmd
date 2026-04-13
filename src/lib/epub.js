@@ -177,10 +177,18 @@ function contentXhtml({ title, metadata, source, bodyHtml }) {
 </html>`
 }
 
+// Simple UUID v4 — crypto.randomUUID() requires HTTPS; Math.random() is fine for epub book IDs
+function uuid4() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16)
+  })
+}
+
 export async function exportEpub(content, metadata, source) {
   const zip = new JSZip()
 
-  const bookId = crypto.randomUUID()
+  const bookId = uuid4()
   const title = metadata.title || 'Untitled'
   const lang = 'en'
   const date = metadata.publishedAtDate || new Date().toISOString().split('T')[0]

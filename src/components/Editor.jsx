@@ -9,6 +9,7 @@ export default function Editor({ content, onChange, activeTab, onTabChange, meta
   const imageInputRef = useRef(null)
   const [clearPending, setClearPending] = useState(false)
   const [epubExporting, setEpubExporting] = useState(false)
+  const [epubError, setEpubError] = useState('')
   const clearTimerRef = useRef(null)
   const [imageUploading, setImageUploading] = useState(false)
   const [imageError, setImageError] = useState('')
@@ -136,8 +137,13 @@ export default function Editor({ content, onChange, activeTab, onTabChange, meta
   async function handleEpubExport() {
     if (epubExporting) return
     setEpubExporting(true)
+    setEpubError('')
     try {
       await exportEpub(content, metadata, source)
+    } catch (err) {
+      console.error('epub export failed:', err)
+      setEpubError(err.message || 'Export failed.')
+      setTimeout(() => setEpubError(''), 5000)
     } finally {
       setEpubExporting(false)
     }
@@ -202,6 +208,9 @@ export default function Editor({ content, onChange, activeTab, onTabChange, meta
             >
               {epubExporting ? 'Exporting…' : 'Export .epub'}
             </button>
+            {epubError && (
+              <span className="text-xs text-red-400 ml-1">{epubError}</span>
+            )}
             {!readOnly && (
               <button
                 onClick={handleClearClick}
